@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 9Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pv-pod
+spec:
+  volumes:
+    - name: pv-storage
+      persistentVolumeClaim:
+        claimName: pv-claim
+  containers:
+    - name: pv-container-01
+      image: rhel7.7
+      volumeMounts:
+        - mountPath: "/mount"
+          name: pv-storage
+      command: ["/bin/sh"]
+      args: ["-c", "echo Hello from the rhel container > /mount/test.txt"]
+
+    - name: pv-container-02
+      image: rhel7.7
+      volumeMounts:
+        - mountPath: "/mount"
+          name: pv-storage
+      command: ["/bin/sh"]
+      args: ["-c", "cat > /mount/test.txt"]

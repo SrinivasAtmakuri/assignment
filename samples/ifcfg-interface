@@ -1,0 +1,14 @@
+# configured via ansible
+BOOTPROTO="static"
+DEVICE="{{ item }}"
+ONBOOT=yes
+TYPE=Ethernet
+IPADDR="{{ inventory_hostname }}"
+NETMASK="{{ netmask }}" 
+GATEWAY="{{ gateway }}" 
+DEFROUTE=yes
+PEERDNS=no
+PEERROUTES=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+NAME="System {{ inventory_hostname }}"

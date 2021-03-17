@@ -1,0 +1,13 @@
+[VirtualMachines]
+192.168.122.7
+
+[machine-01]
+192.168.122.26
+
+[machine-01:vars]
+ansible_connection=ssh
+ansible_user=root
+ansible_ssh_pass=redhat
+net_interfaces=eth0
+gateway=192.168.122.2
+netmask=255.255.255.0

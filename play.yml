@@ -1,0 +1,52 @@
+- hosts: localhost
+  vars:
+      IMAGE_PATH: /home/satmakur/Assignment/images/
+      IMAGE_NAME: rhel-server-7.7-3.kvm.qcow2
+      PASSWORD: redhat
+      VM_NAME: Check-2
+      SAVE: /tmp
+      RAM: 2000
+      VCPUS: 1
+      FILE: "{{ SAVE }}/{{ VM_NAME }}.yml"
+
+  tasks:
+    - name: Check if domain {{ VM_NAME }} already exists
+      check_if_domain_exists:
+        domain_name: "{{ VM_NAME }}"
+      register: result
+
+    - debug: var=result
+
+    - name: Customize image to set password for user root and uninstall cloud-init
+      shell: virt-customize -a {{ IMAGE_PATH }}/{{ IMAGE_NAME }} --root-password password:{{ PASSWORD }} --uninstall cloud-init
+      become: yes
+      when: result.meta == "not-active" or result.meta == "domain-not-found"
+
+    - name: create XML
+      shell: virt-install --ram {{ RAM }} --vcpus {{ VCPUS }} \
+              --disk path={{ IMAGE_PATH }}/{{ IMAGE_NAME }},device=disk,bus=virtio,format=qcow2 \
+              --import --noautoconsole --vnc --network network:default \
+              --name {{ VM_NAME }} --dry-run --print-xml > {{ SAVE }}/{{ VM_NAME }}.yml
+      become: yes
+      when: result.meta == "not-active" or result.meta == "domain-not-found"
+
+    - name: Creating VM for Domain {{ VM_NAME }}
+      CreateLinuxMachine:
+        domain_xml: "{{ FILE }}"
+      register: run_status
+      when: result.meta == "not-active" or result.meta == "domain-not-found"
+
+    - debug: var=run_status
+
+    - name: Fetch IP of VM {{ VM_NAME }}
+      FetchIPAddrofVM:
+        domain_name: "{{ VM_NAME }}"
+      register: IP
+      when: result.meta == "not-active" or result.meta == "domain-not-found"
+
+    - debug: var=IP
+
+    - name: ping fetched IP
+      shell: ping -c 1 -w 2 {{ IP.meta }}
+      ignore_errors: true
+      when: result.meta == "not-active" or result.meta == "domain-not-found" or IP.meta != "0.0.0.0"

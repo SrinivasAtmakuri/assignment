@@ -1,0 +1,46 @@
+- hosts: machine-01
+  
+  tasks:
+  - name: ping test {{ inventory_hostname }}
+    local_action: shell ping -c 1 "{{ inventory_hostname }}"
+    register: ping_result
+    ignore_errors: yes
+  - debug: var=ping_result
+
+  - name: Setup networking (resolv.conf) for {{ inventory_hostname }}
+    template: owner=root group=root mode=644 
+              src=/home/satmakur/Assignment/samples/resolv.conf 
+              dest=/etc/resolv.conf
+    when: ping_result.stderr == ""
+
+  - name: Setup networking (interfaces) for {{ inventory_hostname }}
+    template: owner=root group=root mode=644 
+              src=/home/satmakur/Assignment/samples/ifcfg-interface 
+              dest=/etc/sysconfig/network-scripts/ifcfg-{{ item }}
+    with_items: "{{ net_interfaces }}"
+    register: interface_result
+    when: ping_result.stderr == ""
+  - debug: var=interface_result
+
+  - name: restart network service on {{ inventory_hostname }}
+    systemd:
+      name: network
+      state: restarted
+    when: interface_result.changed
+
+  - name: ping static IP {{ inventory_hostname }}
+    command: ping -c 1 "{{ inventory_hostname }}"
+    delegate_to: localhost
+    register: static_ip_ping_result
+    ignore_errors: yes
+  - debug: var=static_ip_ping_result
+
+  - name: try if ssh works
+    local_action: shell /usr/local/bin/sshpass -p {{ ansible_ssh_pass }} ssh {{ ansible_user }}@{{ inventory_hostname }} "echo Success"
+    register: ssh_result
+  - debug: var=ssh_result
+
+  - name: scp text.txt file to {{ inventory_hostname }}
+    local_action: shell /usr/local/bin/sshpass -p {{ ansible_ssh_pass }} scp -r /home/satmakur/Assignment/samples/text.txt {{ ansible_user }}@{{ inventory_hostname }}:/
+    register: scp_result
+  - debug: var=scp_result
